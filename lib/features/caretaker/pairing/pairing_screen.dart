@@ -79,7 +79,9 @@ class _PairingScreenState extends State<PairingScreen> {
                   fontWeight: FontWeight.bold,
                 ),
                 decoration: InputDecoration(
-                  labelText: 'Device ID',
+                  labelText: 'Pairing Code or Device ID',
+                  hintText: 'e.g. SP-4821 or ESP32-SAFEPATH-01',
+                  hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 14),
                   labelStyle: const TextStyle(color: AppColors.textSecondary),
                   prefixIcon: const Icon(Icons.qr_code, color: AppColors.caretakerPrimary),
                   filled: true,

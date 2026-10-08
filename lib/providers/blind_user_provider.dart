@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import '../core/constants/api_constants.dart';
 import '../models/device_status.dart';
 import '../models/emergency_contact.dart';
 import '../models/location_data.dart';
@@ -44,6 +43,7 @@ class BlindUserProvider extends ChangeNotifier {
   // Throttling cloud upload of 350ms sensor ticks
   DateTime? _lastTelemetryCloudSync;
   DateTime? _lastObstacleAnnounceTime;
+  Timer? _cloudKeepaliveTimer;
 
   BlindUserProvider({
     required Esp32Service esp32Service,
@@ -63,6 +63,34 @@ class BlindUserProvider extends ChangeNotifier {
     _loadEmergencyContacts();
     _subscribeToHardware();
     _initGpsAndCloud();
+    _cloudKeepaliveTimer = Timer.periodic(
+      const Duration(milliseconds: 2500),
+      (_) => _syncDeviceStateToCloud(),
+    );
+  }
+
+  String get deviceId => _storageService.getDeviceId();
+
+  Future<void> setDeviceId(String newId) async {
+    await _storageService.setDeviceId(newId);
+    _syncDeviceStateToCloud();
+    notifyListeners();
+  }
+
+  void _syncDeviceStateToCloud() {
+    _firebaseService.uploadDeviceState(
+      deviceId: deviceId,
+      isStickConnected: _connectionState == Esp32ConnectionState.connected,
+      isAppConnected: true,
+      isSosActive: _isSosActive,
+      isFallDetected: _sensorData?.fallDetected ?? false,
+      location: _currentLocation,
+      telemetry: _sensorData,
+    );
+  }
+
+  void speak(String text) {
+    _ttsService.speak(text);
   }
 
   // Getters
@@ -94,7 +122,7 @@ class BlindUserProvider extends ChangeNotifier {
     _locationService.startTracking();
     _locSub = _locationService.locationStream.listen((loc) {
       _currentLocation = loc;
-      _firebaseService.uploadLocation(ApiConstants.defaultDeviceId, loc);
+      _firebaseService.uploadLocation(deviceId, loc);
       notifyListeners();
     });
   }
@@ -127,7 +155,7 @@ class BlindUserProvider extends ChangeNotifier {
       if (_lastTelemetryCloudSync == null ||
           now.difference(_lastTelemetryCloudSync!) > const Duration(milliseconds: 1000)) {
         _lastTelemetryCloudSync = now;
-        _firebaseService.uploadTelemetry(ApiConstants.defaultDeviceId, data);
+        _firebaseService.uploadTelemetry(deviceId, data);
       }
 
       // Handle SOS from /sensors
@@ -246,7 +274,7 @@ class BlindUserProvider extends ChangeNotifier {
     _currentSosEvent = event;
 
     // 3. Firebase SOS event upload for caretaker
-    await _firebaseService.createSosEvent(ApiConstants.defaultDeviceId, event);
+    await _firebaseService.createSosEvent(deviceId, event);
 
     // 4. Dispatch emergency notification and SMS
     await _dispatchService.dispatchEmergencyAlert(
@@ -273,7 +301,7 @@ class BlindUserProvider extends ChangeNotifier {
       _isSosActive = false;
       if (_currentSosEvent != null) {
         await _firebaseService.resolveSosEvent(
-          ApiConstants.defaultDeviceId,
+          deviceId,
           _currentSosEvent!.eventId,
         );
         _currentSosEvent = _currentSosEvent!.copyWith(
@@ -295,7 +323,7 @@ class BlindUserProvider extends ChangeNotifier {
     }
     _emergencyContacts.add(contact);
     await _storageService.saveEmergencyContacts(_emergencyContacts);
-    await _firebaseService.uploadEmergencyContact(ApiConstants.defaultDeviceId, contact);
+    await _firebaseService.uploadEmergencyContact(deviceId, contact);
     _ttsService.speak('Emergency contact ${contact.name} saved.');
     notifyListeners();
   }
@@ -308,7 +336,7 @@ class BlindUserProvider extends ChangeNotifier {
       }
       _emergencyContacts[index] = contact;
       await _storageService.saveEmergencyContacts(_emergencyContacts);
-      await _firebaseService.uploadEmergencyContact(ApiConstants.defaultDeviceId, contact);
+      await _firebaseService.uploadEmergencyContact(deviceId, contact);
       _ttsService.speak('Emergency contact ${contact.name} updated.');
       notifyListeners();
     }
@@ -326,6 +354,7 @@ class BlindUserProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _cloudKeepaliveTimer?.cancel();
     _connSub?.cancel();
     _sensorSub?.cancel();
     _sosSub?.cancel();

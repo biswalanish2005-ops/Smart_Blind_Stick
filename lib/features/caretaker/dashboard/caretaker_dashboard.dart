@@ -63,9 +63,11 @@ class CaretakerDashboard extends StatelessWidget {
               children: [
                 // Top Status Bar (Section 7)
                 _TopStatusBar(
+                  isCaretakerOnline: provider.isCaretakerOnline,
                   isUserOnline: provider.isBlindUserOnline,
                   isStickConnected: provider.isStickConnected,
                   isSosActive: isSos,
+                  isFallDetected: provider.isFallDetected,
                 ),
 
                 // Main Content (Live Map + Telemetry Panel)
@@ -121,14 +123,18 @@ class CaretakerDashboard extends StatelessWidget {
 }
 
 class _TopStatusBar extends StatelessWidget {
+  final bool isCaretakerOnline;
   final bool isUserOnline;
   final bool isStickConnected;
   final bool isSosActive;
+  final bool isFallDetected;
 
   const _TopStatusBar({
+    required this.isCaretakerOnline,
     required this.isUserOnline,
     required this.isStickConnected,
     required this.isSosActive,
+    required this.isFallDetected,
   });
 
   @override
@@ -141,31 +147,62 @@ class _TopStatusBar extends StatelessWidget {
           bottom: BorderSide(color: AppColors.borderLight, width: 1.5),
         ),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+      child: Column(
         children: [
-          // Blind User Status
-          _StatusBadge(
-            title: 'BLIND USER',
-            status: isUserOnline ? 'ONLINE' : 'OFFLINE',
-            isPositive: isUserOnline,
-          ),
-          // Vertical divider
-          Container(width: 1, height: 28, color: AppColors.borderLight),
-          // Stick Status
-          _StatusBadge(
-            title: 'STICK',
-            status: isStickConnected ? 'CONNECTED' : 'DISCONNECTED',
-            isPositive: isStickConnected,
-          ),
-          // Vertical divider
-          Container(width: 1, height: 28, color: AppColors.borderLight),
-          // SOS Status
-          _StatusBadge(
-            title: 'SOS',
-            status: isSosActive ? 'ACTIVE' : 'NORMAL',
-            isPositive: !isSosActive,
-            isEmergency: isSosActive,
+          if (!isCaretakerOnline)
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+              decoration: BoxDecoration(
+                color: AppColors.dangerRed.withAlpha(40),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: AppColors.dangerRed),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.wifi_off, size: 14, color: AppColors.dangerRed),
+                  SizedBox(width: 6),
+                  Text(
+                    'CARETAKER OFFLINE (NO INTERNET CONNECTION)',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.dangerRed,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              // Blind User Status
+              _StatusBadge(
+                title: 'BLIND USER',
+                status: isUserOnline ? 'ONLINE' : 'OFFLINE',
+                isPositive: isUserOnline,
+              ),
+              // Vertical divider
+              Container(width: 1, height: 28, color: AppColors.borderLight),
+              // Stick Status
+              _StatusBadge(
+                title: 'STICK',
+                status: isStickConnected ? 'CONNECTED' : 'DISCONNECTED',
+                isPositive: isStickConnected,
+              ),
+              // Vertical divider
+              Container(width: 1, height: 28, color: AppColors.borderLight),
+              // SOS / Fall Status
+              _StatusBadge(
+                title: isSosActive ? 'SOS' : (isFallDetected ? 'FALL' : 'EMERGENCY'),
+                status: isSosActive
+                    ? 'ACTIVE'
+                    : (isFallDetected ? 'DETECTED' : 'NORMAL'),
+                isPositive: !isSosActive && !isFallDetected,
+                isEmergency: isSosActive || isFallDetected,
+              ),
+            ],
           ),
         ],
       ),

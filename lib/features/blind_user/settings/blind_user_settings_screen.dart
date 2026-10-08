@@ -194,6 +194,75 @@ class _BlindUserSettingsScreenState extends State<BlindUserSettingsScreen> {
             ),
             const SizedBox(height: 16),
 
+            // Caretaker Pairing Code Card (For Caretaker Linking)
+            Card(
+              color: AppColors.surface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(color: AppColors.borderLight),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.qr_code, color: AppColors.highVisYellow, size: 24),
+                        SizedBox(width: 8),
+                        Text(
+                          'Caretaker Pairing Code',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.highVisYellow,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Provide this code to your caretaker to pair their phone:',
+                      style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceElevated,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.highVisYellow, width: 1.5),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            blindProvider.deviceId,
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 2.0,
+                              color: AppColors.highVisYellow,
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.volume_up, color: AppColors.highVisYellow),
+                            tooltip: 'Speak Pairing Code',
+                            onPressed: () {
+                              final chars = blindProvider.deviceId.split('').join(' ');
+                              blindProvider.speak('Your pairing code is $chars');
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
             // Voice Accessibility Settings
             Card(
               color: AppColors.surface,

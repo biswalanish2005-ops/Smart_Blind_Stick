@@ -11,6 +11,8 @@ class StorageService {
   static const String _keyEmergencyContacts = 'safepath_emergency_contacts';
   static const String _keyTtsEnabled = 'safepath_tts_enabled';
   static const String _keyTtsSpeechRate = 'safepath_tts_speech_rate';
+  static const String _keyDeviceId = 'safepath_device_id';
+  static const String _keyFirebaseRtdbUrl = 'safepath_firebase_rtdb_url';
 
   final SharedPreferences _prefs;
 
@@ -66,4 +68,32 @@ class StorageService {
 
   double getTtsSpeechRate() => _prefs.getDouble(_keyTtsSpeechRate) ?? 0.5;
   Future<void> setTtsSpeechRate(double rate) => _prefs.setDouble(_keyTtsSpeechRate, rate);
+
+  // Device Pairing Code
+  String getDeviceId() {
+    final existing = _prefs.getString(_keyDeviceId);
+    if (existing != null && existing.trim().isNotEmpty) {
+      return existing.trim();
+    }
+    // Generate a default memorable code: e.g. SP-4821
+    final code = 'SP-${(1000 + (DateTime.now().millisecondsSinceEpoch % 9000))}';
+    _prefs.setString(_keyDeviceId, code);
+    return code;
+  }
+
+  Future<void> setDeviceId(String id) async {
+    final clean = id.trim().toUpperCase();
+    if (clean.isNotEmpty) {
+      await _prefs.setString(_keyDeviceId, clean);
+    }
+  }
+
+  // Firebase Realtime Database URL
+  String getFirebaseRtdbUrl() {
+    return _prefs.getString(_keyFirebaseRtdbUrl) ?? ApiConstants.defaultFirebaseRtdbUrl;
+  }
+
+  Future<void> setFirebaseRtdbUrl(String url) async {
+    await _prefs.setString(_keyFirebaseRtdbUrl, url.trim());
+  }
 }

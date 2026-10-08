@@ -8,6 +8,8 @@ class ApiConstants {
   static const String defaultMdnsHost = 'http://safepath-stick.local';
   static const String defaultBaseUrl = 'http://192.168.43.127';
   static const String defaultDeviceId = 'ESP32-SAFEPATH-01';
+  static const String defaultFirebaseRtdbUrl = 'https://safepath-smart-stick-default-rtdb.firebaseio.com';
+  static const String defaultCloudRelayUrl = 'https://ntfy.sh';
 
   // HTTP Endpoints (firmware contract)
   static const String rootEndpoint = '/';
