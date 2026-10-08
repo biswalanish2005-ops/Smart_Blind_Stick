@@ -1,0 +1,33 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Authenticated Users profile access
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Devices & Associated Sub-collections
+    match /devices/{deviceId} {
+      // Authenticated users can access registered devices
+      allow read, write: if request.auth != null;
+
+      match /telemetry/{docId} {
+        allow read, write: if request.auth != null;
+      }
+
+      match /location/{docId} {
+        allow read, write: if request.auth != null;
+      }
+
+      match /emergencyContact/{docId} {
+        allow read, write: if request.auth != null;
+      }
+
+      match /sosEvents/{eventId} {
+        allow read, write: if request.auth != null;
+      }
+    }
+  }
+}
