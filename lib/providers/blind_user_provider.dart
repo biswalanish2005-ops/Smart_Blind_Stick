@@ -154,6 +154,8 @@ class BlindUserProvider extends ChangeNotifier {
     });
   }
 
+  Esp32Service get esp32Service => _esp32Service;
+
   void startHardwareConnection() {
     _esp32Service.startMonitoring();
     _locationService.startTracking();
@@ -162,6 +164,24 @@ class BlindUserProvider extends ChangeNotifier {
   void stopHardwareConnection() {
     _esp32Service.stopMonitoring();
     _locationService.stopTracking();
+  }
+
+  Future<void> updateEsp32Url(String newUrl) async {
+    _esp32Service.updateBaseUrl(newUrl);
+    await _storageService.setEsp32BaseUrl(_esp32Service.baseUrl);
+    startHardwareConnection();
+    notifyListeners();
+  }
+
+  Future<String?> discoverEsp32() async {
+    final discovered = await _esp32Service.discoverEsp32();
+    if (discovered != null) {
+      await _storageService.setEsp32BaseUrl(discovered);
+      _ttsService.speak('Discovered Smart Stick on hotspot');
+      startHardwareConnection();
+      notifyListeners();
+    }
+    return discovered;
   }
 
   Future<void> fetchHealthDiagnostics() async {

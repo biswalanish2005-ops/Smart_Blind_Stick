@@ -55,7 +55,57 @@ class Esp32Service {
   Stream<bool> get sosTriggerStream => _sosTriggerController.stream;
 
   void updateBaseUrl(String newUrl) {
-    baseUrl = newUrl.trim().replaceAll(RegExp(r'/+$'), '');
+    var trimmed = newUrl.trim().replaceAll(RegExp(r'/+$'), '');
+    if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+      trimmed = 'http://$trimmed';
+    }
+    baseUrl = trimmed;
+  }
+
+  /// Test connectivity to a specific URL or IP address
+  Future<bool> testConnection(String targetUrl) async {
+    try {
+      var url = targetUrl.trim().replaceAll(RegExp(r'/+$'), '');
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'http://$url';
+      }
+      final uri = Uri.parse('$url${ApiConstants.healthEndpoint}');
+      final response =
+          await _client.get(uri).timeout(const Duration(milliseconds: 2500));
+      return response.statusCode == 200 &&
+          response.body.contains('ESP32-SAFEPATH-01');
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Automatically discover the ESP32 on the phone hotspot or local network.
+  /// Probes mDNS (safepath-stick.local), current configured baseUrl, and common hotspot IPs.
+  Future<String?> discoverEsp32({
+    Duration timeout = const Duration(milliseconds: 1500),
+  }) async {
+    final candidates = <String>[
+      ApiConstants.defaultMdnsHost,
+      baseUrl,
+      'http://192.168.43.127',
+      'http://192.168.43.100',
+      'http://192.168.43.2',
+      'http://192.168.4.1',
+    ];
+
+    for (final candidate in candidates) {
+      try {
+        final uri = Uri.parse('$candidate${ApiConstants.healthEndpoint}');
+        final res = await _client.get(uri).timeout(timeout);
+        if (res.statusCode == 200 && res.body.contains('ESP32-SAFEPATH-01')) {
+          updateBaseUrl(candidate);
+          return candidate;
+        }
+      } catch (_) {
+        // Probe next candidate
+      }
+    }
+    return null;
   }
 
   /// Start automatic heartbeat and continuous sensor polling
@@ -116,7 +166,7 @@ class Esp32Service {
       }
     } on SocketException catch (e) {
       _handleCommunicationError(
-          'Cannot reach stick on Wi-Fi: ${e.message}. Connect to SafePath_SmartStick.');
+          'Cannot reach stick at $baseUrl: ${e.message}. Ensure phone hotspot is ON and ESP32 is connected.');
       return null;
     } on TimeoutException {
       _handleCommunicationError('Heartbeat timed out. ESP32 unresponsive.');
@@ -158,7 +208,7 @@ class Esp32Service {
       }
     } on SocketException catch (e) {
       _handleCommunicationError(
-          'Wi-Fi unreachable: ${e.message}. Ensure connected to SafePath_SmartStick.');
+          'Hotspot Wi-Fi unreachable at $baseUrl: ${e.message}. Ensure phone hotspot is ON (2.4 GHz) and ESP32 is connected.');
       return null;
     } on TimeoutException {
       _handleCommunicationError('Sensor request timed out.');

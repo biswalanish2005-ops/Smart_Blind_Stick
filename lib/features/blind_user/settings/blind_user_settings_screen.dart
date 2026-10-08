@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../core/constants/api_constants.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../models/user_role.dart';
 import '../../../providers/blind_user_provider.dart';
@@ -47,7 +46,7 @@ class _BlindUserSettingsScreenState extends State<BlindUserSettingsScreen> {
         child: ListView(
           padding: const EdgeInsets.all(20.0),
           children: [
-            // Stick Hardware Info
+            // SafePath Stick Connection (Phone Hotspot Mode)
             Card(
               color: AppColors.surface,
               shape: RoundedRectangleBorder(
@@ -59,53 +58,135 @@ class _BlindUserSettingsScreenState extends State<BlindUserSettingsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Hardware Configuration',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.highVisYellow,
+                    const Row(
+                      children: [
+                        Icon(Icons.wifi_tethering, color: AppColors.highVisYellow, size: 24),
+                        SizedBox(width: 8),
+                        Text(
+                          'SafePath Stick Connection',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.highVisYellow,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceElevated,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.borderLight),
+                      ),
+                      child: const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Required Phone State:',
+                            style: TextStyle(
+                              color: AppColors.highVisYellow,
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text('• Mobile Data → ON (Internet & Cloud SOS)',
+                              style: TextStyle(color: Colors.white, fontSize: 13)),
+                          Text('• Wi-Fi Hotspot → ON (2.4 GHz band)',
+                              style: TextStyle(color: Colors.white, fontSize: 13)),
+                          Text('• GPS Location → ON (Emergency Coordinates)',
+                              style: TextStyle(color: Colors.white, fontSize: 13)),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    _infoRow('Device ID', ApiConstants.defaultDeviceId),
-                    _infoRow('Wi-Fi SSID', ApiConstants.defaultSsid),
-                    _infoRow('Wi-Fi Password', ApiConstants.defaultPassword),
-                    const Divider(color: AppColors.borderLight, height: 24),
+                    const SizedBox(height: 16),
                     const Text(
-                      'ESP32 HTTP Gateway URL',
+                      'ESP32 IP Address or Hostname',
                       style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
                     ),
                     const SizedBox(height: 8),
                     TextField(
                       controller: _urlController,
-                      style: const TextStyle(color: Colors.white, fontSize: 16),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontFamily: 'monospace',
+                      ),
                       decoration: InputDecoration(
+                        hintText: 'e.g. 192.168.43.127 or safepath-stick.local',
+                        hintStyle: const TextStyle(color: AppColors.textMuted),
                         filled: true,
                         fillColor: AppColors.surfaceElevated,
+                        prefixIcon: const Icon(Icons.router, color: AppColors.highVisYellow),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
                           borderSide: const BorderSide(color: AppColors.borderLight),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 48),
-                        backgroundColor: AppColors.surfaceBright,
-                        foregroundColor: AppColors.highVisYellow,
-                      ),
-                      onPressed: () async {
-                        await settings.setEsp32BaseUrl(_urlController.text);
-                        blindProvider.startHardwareConnection();
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Stick URL updated.')),
-                          );
-                        }
-                      },
-                      child: const Text('Save & Reconnect'),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: const Size(0, 48),
+                              backgroundColor: AppColors.highVisYellow,
+                              foregroundColor: Colors.black,
+                            ),
+                            icon: const Icon(Icons.link),
+                            label: const Text('Connect'),
+                            onPressed: () async {
+                              final input = _urlController.text.trim();
+                              if (input.isEmpty) return;
+                              await settings.setEsp32BaseUrl(input);
+                              await blindProvider.updateEsp32Url(input);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Connected to ESP32 at $input')),
+                                );
+                              }
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(0, 48),
+                              foregroundColor: AppColors.highVisYellow,
+                              side: const BorderSide(color: AppColors.highVisYellow),
+                            ),
+                            icon: const Icon(Icons.search),
+                            label: const Text('Auto-Discover'),
+                            onPressed: () async {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Probing hotspot for ESP32...')),
+                              );
+                              final discovered = await blindProvider.discoverEsp32();
+                              if (discovered != null) {
+                                _urlController.text = discovered;
+                                await settings.setEsp32BaseUrl(discovered);
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Found SafePath stick at $discovered!')),
+                                  );
+                                }
+                              } else {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Not found automatically. Check hotspot IP manually.'),
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -223,26 +304,6 @@ class _BlindUserSettingsScreenState extends State<BlindUserSettingsScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _infoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(color: AppColors.textMuted)),
-          Text(
-            value,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-              fontFamily: 'monospace',
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -3,10 +3,10 @@
 class ApiConstants {
   ApiConstants._();
 
-  // ESP32 Wi-Fi SoftAP Configuration
-  static const String defaultSsid = 'SafePath_SmartStick';
-  static const String defaultPassword = 'SafePath2026';
-  static const String defaultBaseUrl = 'http://192.168.4.1';
+  // ESP32 Phone Hotspot (WIFI_STA) Configuration
+  static const String defaultHotspotSsid = 'SafePath_Hotspot';
+  static const String defaultMdnsHost = 'http://safepath-stick.local';
+  static const String defaultBaseUrl = 'http://192.168.43.127';
   static const String defaultDeviceId = 'ESP32-SAFEPATH-01';
 
   // HTTP Endpoints (firmware contract)

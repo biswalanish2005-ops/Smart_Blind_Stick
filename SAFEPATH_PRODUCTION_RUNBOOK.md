@@ -66,11 +66,28 @@
 
 ## 2. ESP32 FIRMWARE & HARDWARE CONTRACT
 
-### Network Credentials
-- **Access Point SSID:** `SafePath_SmartStick`
-- **Password:** `SafePath2026`
-- **Default IP Address:** `http://192.168.4.1` (Port `80`)
-- **App Heartbeat Timeout:** `6000 ms` (App pings `/app/heartbeat` every `2000 ms`)
+### Network Architecture (Phone Hotspot Mode - WIFI_STA)
+The ESP32 runs in **Station Mode (`WIFI_STA`)** and connects directly to the blind user's smartphone Wi-Fi hotspot. This allows the phone to keep **Mobile Data ON**, **GPS ON**, and **Hotspot ON** simultaneously, ensuring continuous cloud synchronization, real GPS emergency dispatches, and caretaker tracking.
+
+- **Mode:** `WiFi.mode(WIFI_STA)`
+- **Configurable Credentials:**
+  ```cpp
+  const char* WIFI_SSID = "PHONE_HOTSPOT_NAME";
+  const char* WIFI_PASSWORD = "PHONE_HOTSPOT_PASSWORD";
+  ```
+- **Firmware Location:** `firmware/esp32/SafePath_SmartStick.ino`
+- **mDNS Hostname:** `http://safepath-stick.local`
+- **Default IP Address Range:** `http://192.168.43.xxx` (Assigned by Phone DHCP, e.g., `192.168.43.127`)
+- **Non-Blocking Reconnection:** Reconnect attempts occur in the background every `5000 ms` without blocking ultrasonic obstacle detection, MPU6050 fall detection, buzzer beeping, or physical SOS triggers.
+- **Heartbeat & Status:**
+  - Status check: `WiFi.status() == WL_CONNECTED`
+  - Heartbeat timeout: `6000 ms` (App pings `/app/heartbeat` every `2000 ms`)
+  - Serial monitor feedback:
+    - `"Connecting to phone hotspot..."`
+    - `"ESP32 CONNECTED TO PHONE HOTSPOT"`
+    - `"ESP32 IP Address: xxx.xxx.xxx.xxx"`
+    - `"APP HEARTBEAT RECEIVED - MOBILE APP CONNECTED"`
+    - `"SAFEPATH MOBILE APP CONNECTED SUCCESSFULLY"`
 
 ### Fixed GPIO Pin Mapping
 | Component | Function | GPIO Pin | Voltage Note |
@@ -87,12 +104,12 @@
 | **Active Buzzer** | Alarm Output | `GPIO 32` | Driven with synchronized patterns |
 | **Warning LED** | Visual Alarm | `GPIO 33` | Synchronized with buzzer |
 
-### HTTP Endpoints
+### HTTP Endpoints (Port 80)
 1. `GET /` — Subsystem banner and endpoint index.
 2. `GET /app/heartbeat` — Mobile client connection pulse. Resets heartbeat timer on hardware.
 3. `GET /sensors` — Complete JSON telemetry payload. **Does NOT clear SOS.**
 4. `GET /sos-status` — Fast emergency state query.
-5. `GET /health` — Hardware diagnostics (MPU6050, 3 ultrasonic statuses, Wi-Fi clients).
+5. `GET /health` — Hardware diagnostics (MPU6050, 3 ultrasonic statuses, Wi-Fi status, client IP).
 6. `GET /clear-sos` — Resets active buzzer and hardware emergency flags.
 
 ---
